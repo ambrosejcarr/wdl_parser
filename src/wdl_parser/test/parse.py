@@ -146,5 +146,51 @@ class TestWorkflow(unittest.TestCase):
         print(parsed)
 
 
+class TestTask(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.data = '''
+        task StarAlignSubset {
+          File genomic_fastq
+          File gtf
+          File star_genome
+          Int? subset_size = 1000000
+        
+          # note that STAR runThreadN must always equal 1 (default) or the order of the .bam file will be
+          # disordered relative to the input data, breaking the expectation of same-ordering necessary
+          # for downstream methods
+          command {
+            # unpack genome reference
+            tar -zxvf ${star_genome}
+        
+            # truncate the input file
+            zcat ${genomic_fastq} | head -n ${subset_size} > reads.fastq
+        
+            # align reads
+            STAR  --readFilesIn reads.fastq \
+              --genomeDir ./star \
+              --outSAMstrandField intronMotif \
+              --genomeLoad NoSharedMemory \
+              --sjdbGTFfile ${gtf} \
+              --outSAMtype BAM Unsorted  \
+              --outSAMunmapped Within \
+              --runThreadN 1
+          }
+          output {
+            File output_bam = "Aligned.out.bam"
+          }
+          runtime {
+            docker: "humancellatlas/star_dev:v1"
+            memory: "8 GB"  # not used locally
+            disks: "local-disk 220 HDD"  # 80G fastq, 32G reference bundle, 80G bam, 15% overflow (30G)
+          }
+        }'''
+
+    def test_parse_task(self):
+        print(self.data[124:135])
+        parsed = wdl_parser.parse._task.parseString(self.data)
+
+
 if __name__ == "__main__":
     nose2.main()
