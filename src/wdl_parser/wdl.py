@@ -81,7 +81,7 @@ class Runtime:
         except KeyError:
             self._docker = None
         try:
-            self._memory = Runtime(parsed_runtime['memory'])
+            self._memory = Memory(parsed_runtime['memory'])
         except KeyError:
             self._memory = None
         try:
@@ -122,10 +122,24 @@ class WDL:
         self._workflows = []
         self._imports = []
 
-        for block in parse.wdl().ignore(parse.wdl_comment()).parseString(data):
+        parsed = parse.wdl().ignore(parse.wdl_comment()).parseString(data)
+
+        for block in parsed:
             if 'task_name' in block:
                 self._tasks.append(Task(block))
             elif 'workflow_name' in block:
                 self._workflows.append(Workflow(block))
             elif 'imported_wdl' in block:
                 self._imports.append(Imported_WDL(block))
+
+    @property
+    def tasks(self):
+        return self._tasks
+
+    @property
+    def workflows(self):
+        return self._workflows
+
+    @property
+    def imports(self):
+        return self._imports
