@@ -17,19 +17,29 @@ class TestVariableDefinition(unittest.TestCase):
             File fasta
             File gtf
             String reference_name
+            Int[Int]? num_references = 10000
             call PartyTime {
             '''
 
+    # def test_match_keyword_argument(self):
+    #     # todo improve tests
+    #     data = 'Int? num_references = 10000'
+    #     _ = wdl_parser.parse.VariableDefinitions.keyword_argument().parseString(data)
+
     def test_variable_definition(self):
-        parsed = wdl_parser.parse._variable_definitions.parseString(self.data)
-        self.assertEqual(len(parsed), 3)
-        self.assertEqual(parsed[0]['type'], 'File')
-        self.assertEqual(parsed[1]['type'], 'File')
-        self.assertEqual(parsed[2]['type'], 'String')
+        parsed = wdl_parser.parse.variable_definitions().parseString(self.data)
+        self.assertEqual(len(parsed), 4)
+        self.assertEqual(parsed[0]['variable_type'], 'File')
+        self.assertEqual(parsed[1]['variable_type'], 'File')
+        self.assertEqual(parsed[2]['variable_type'], 'String')
 
         self.assertEqual(parsed[0]['variable_name'], 'fasta')
         self.assertEqual(parsed[1]['variable_name'], 'gtf')
         self.assertEqual(parsed[2]['variable_name'], 'reference_name')
+
+        self.assertEqual(parsed[3]['default_value'], '10000')
+        self.assertEqual(parsed[3]['variable_name'], 'num_references')
+        self.assertEqual(parsed[3]['variable_type'], 'Int[Int]?')
 
 
 class TestCallAssignedInput(unittest.TestCase):
@@ -44,7 +54,7 @@ class TestCallAssignedInput(unittest.TestCase):
             }'''
 
     def test_call_assigned_input(self):
-        parsed = wdl_parser.parse._call_assigned_input.parseString(self.data)['inputs']
+        parsed = wdl_parser.parse.call_input_assignment().parseString(self.data)['call_inputs']
         self.assertEqual(len(parsed), 3)
         self.assertEqual(parsed[0]['value'], 'fasta.weirdness')
         self.assertEqual(parsed[1]['value'], 'gtf')
@@ -73,12 +83,12 @@ class TestCall(unittest.TestCase):
             }'''
 
     def test_call(self):
-        parsed = wdl_parser.parse._calls.parseString(self.data)['calls']
+        parsed = wdl_parser.parse.workflow_calls().parseString(self.data)['calls']
 
         self.assertEqual(len(parsed), 2)
         self.assertEqual(parsed[0]['task_name'], 'CellRangerMkref')
-        self.assertEqual(len(parsed[0]['inputs']), 3)
-        self.assertEqual(parsed[0]['inputs'][2]['variable_name'], 'reference_name')
+        self.assertEqual(len(parsed[0]['call_inputs']), 3)
+        self.assertEqual(parsed[0]['call_inputs'][2]['variable_name'], 'reference_name')
 
 
 class TestOutput(unittest.TestCase):
@@ -92,7 +102,7 @@ class TestOutput(unittest.TestCase):
             }'''
 
     def test_output(self):
-        parsed = wdl_parser.parse._outputs.parseString(self.data)
+        parsed = wdl_parser.parse.outputs().parseString(self.data)
         self.assertEqual(len(parsed['outputs']), 2)
         self.assertEqual(parsed['outputs'][1]['variable_type'], 'File')
         self.assertEqual(parsed['outputs'][1]['variable_name'], 'reference_bundle2')
@@ -142,8 +152,8 @@ class TestWorkflow(unittest.TestCase):
           }'''
 
     def test_workflow(self):
-        parsed = wdl_parser.parse._workflow.parseString(self.data)
-        print(parsed)
+        # todo improve tests
+        _ = wdl_parser.parse.workflow().parseString(self.data)
 
 
 class TestTask(unittest.TestCase):
@@ -187,9 +197,29 @@ class TestTask(unittest.TestCase):
           }
         }'''
 
+    def test_docker(self):
+        data = 'docker: "humancellatlas/star_dev:v1"'
+        parsed = wdl_parser.parse.docker().parseString(data)
+        self.assertEqual(parsed['docker'], 'humancellatlas/star_dev:v1')
+
+    def test_memory(self):
+        data = 'memory: "8 GB"'
+        parsed = wdl_parser.parse.memory().parseString(data)
+        self.assertEqual(parsed['memory'], '8 GB')
+
+    def test_disks(self):
+        data = 'disks: "local-disk 220 HDD"'
+        parsed = wdl_parser.parse.disks().parseString(data)
+        self.assertEqual(parsed['disks']['disk_location'], 'local-disk')
+        self.assertEqual(parsed['disks']['size'], '220')
+        self.assertEqual(parsed['disks']['disk_type'], 'HDD')
+
+    # @unittest.skip('not working yet')
     def test_parse_task(self):
-        print(self.data[124:135])
-        parsed = wdl_parser.parse._task.parseString(self.data)
+        parsed = wdl_parser.parse.task().ignore(wdl_parser.parse.wdl_comment()).parseString(self.data)
+        print(parsed['task_name'])
+        print(parsed['variable_definitions'])
+        print(parsed['outputs'])
 
 
 if __name__ == "__main__":
