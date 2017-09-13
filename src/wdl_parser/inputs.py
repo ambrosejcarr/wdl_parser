@@ -1,4 +1,0 @@
-
-class Inputs:
-    pass
-
