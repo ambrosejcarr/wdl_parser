@@ -4,7 +4,7 @@ from . import parse
 # todo might be able to switch to getattr/setattr for code maintainability
 
 
-class Imported_WDL:
+class ImportedWDL:
 
     def __init__(self, parsed_import):
         self._name = parsed_import['imported_wdl']
@@ -130,7 +130,7 @@ class WDL:
             elif 'workflow_name' in block:
                 self._workflows.append(Workflow(block))
             elif 'imported_wdl' in block:
-                self._imports.append(Imported_WDL(block))
+                self._imports.append(ImportedWDL(block))
 
     @property
     def tasks(self):

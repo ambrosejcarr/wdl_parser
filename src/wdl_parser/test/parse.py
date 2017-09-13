@@ -101,6 +101,11 @@ class TestOutput(unittest.TestCase):
               File reference_bundle2 = CellRangerMkref.reference_bundle2
             }'''
 
+        cls.data2 = '''
+        output {
+          Array[File] output_subset_fastqs = glob("./*_subset.fastq.gz")
+        }'''
+
     def test_output(self):
         parsed = wdl_parser.parse.outputs().parseString(self.data)
         self.assertEqual(len(parsed['outputs']), 2)
@@ -108,6 +113,14 @@ class TestOutput(unittest.TestCase):
         self.assertEqual(parsed['outputs'][1]['variable_name'], 'reference_bundle2')
         self.assertEqual(parsed['outputs'][1]['variable_value'],
                          'CellRangerMkref.reference_bundle2')
+
+    def test_output2(self):
+        parsed = wdl_parser.parse.outputs().parseString(self.data2)
+        self.assertEqual(len(parsed['outputs']), 1)
+        self.assertEqual(parsed['outputs'][0]['variable_type'], 'Array[File]')
+        self.assertEqual(parsed['outputs'][0]['variable_name'], 'output_subset_fastqs')
+        self.assertEqual(parsed['outputs'][0]['variable_value'], 'glob("./*_subset.fastq.gz")')
+
 
 
 class TestWorkflow(unittest.TestCase):
@@ -197,6 +210,58 @@ class TestTask(unittest.TestCase):
           }
         }'''
 
+        cls.data2 = '''
+        task SubsetFastqFromIndices {
+          File indices_json
+          File input_fastq_r1
+          File input_fastq_r2
+          File input_fastq_i1
+        
+          command <<<
+            python3 <<CODE
+        
+            import os
+            import json
+            import scsequtil.fastq as fq
+            import scsequtil.reader as rd
+            import gzip
+        
+            # get indices
+            with open('${indices_json}', 'r') as f:
+              indices = set(json.load(f))
+        
+            # set fastq inputs
+            fastqs = ['${input_fastq_r1}', '${input_fastq_r2}', '${input_fastq_i1}']
+            readers = [fq.Reader(f) for f in fastqs]
+        
+            # define filenames
+            filenames_nopath = [os.path.split(f)[1] for f in fastqs]
+            output_filenames = [f.partition('.fastq')[0] + '_subset.fastq.gz' for f in filenames_nopath]
+        
+            # open some files
+            output_fileobjs = [gzip.open(f, 'wt') for f in output_filenames]
+        
+            # write to file
+            try:
+                for records in rd.zip_readers(*readers, indices=indices):
+                    for record, fout in zip(records, output_fileobjs):
+                        fout.write(str(record))
+            finally:
+                for f in output_fileobjs:
+                    f.close()
+        
+            CODE
+          >>>
+          runtime {
+            docker: "ambrosejcarr/python3-scientific:0.2.0"
+            memory: "2 GB"
+            disks: "local-disk 220 HDD"
+          }
+          output {
+            Array[File] output_subset_fastqs = glob("./*_subset.fastq.gz")
+          }
+        }'''
+
     def test_docker(self):
         data = 'docker: "humancellatlas/star_dev:v1"'
         parsed = wdl_parser.parse.docker().parseString(data)
@@ -216,7 +281,17 @@ class TestTask(unittest.TestCase):
 
     # @unittest.skip('not working yet')
     def test_parse_task(self):
-        parsed = wdl_parser.parse.task().ignore(wdl_parser.parse.wdl_comment()).parseString(self.data)
+        parsed = wdl_parser.parse.task().ignore(wdl_parser.parse.wdl_comment()
+                                                ).parseString(self.data)
+        print(parsed['task_name'])
+        print(parsed['variable_definitions'])
+        print(parsed['outputs'])
+
+    # @unittest.skip('not working yet')
+    def test_parse_task2(self):
+        parsed = wdl_parser.parse.task().ignore(wdl_parser.parse.wdl_comment()
+                                                ).parseString(self.data2)
+        print(parsed)
         print(parsed['task_name'])
         print(parsed['variable_definitions'])
         print(parsed['outputs'])

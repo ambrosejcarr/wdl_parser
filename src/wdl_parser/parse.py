@@ -1,6 +1,6 @@
 import pyparsing as pp
 
-_variable_chars = pp.alphanums + '._[]?'  # supported syntax in WDL
+_variable_chars = pp.alphanums + '._[]?*-/():'  # supported syntax in WDL
 _value_chars = _variable_chars + '"'
 
 
@@ -80,7 +80,7 @@ def output_definition():
         pp.Word(_variable_chars).setResultsName('variable_type') +
         pp.Word(_variable_chars).setResultsName('variable_name') +
         suppressed_literal('=') +
-        pp.Word(_variable_chars + '"').setResultsName('variable_value')
+        pp.Word(_value_chars).setResultsName('variable_value')
     ))
 
 
@@ -99,8 +99,10 @@ def workflow():
         pp.Word(_variable_chars).setResultsName('workflow_name') +
         suppressed_literal('{') +
         variable_definitions() +
-        workflow_calls() +
-        outputs() +
+        pp.OneOrMore(
+            workflow_calls() |
+            outputs()
+        ) +
         suppressed_literal('}')
     )
 
@@ -109,7 +111,10 @@ def workflow():
 def command():
     return (
         suppressed_literal('command') +
-        pp.Group(pp.nestedExpr('{', '}')).setResultsName('command')
+        pp.Group(
+            pp.nestedExpr('{', '}') |
+            pp.nestedExpr('<<<', '>>>')
+        ).setResultsName('command')
     )
 
 
@@ -145,9 +150,11 @@ def runtime():
     return (
         suppressed_literal('runtime') +
         suppressed_literal('{') +
-        pp.Optional(docker()) +
-        pp.Optional(memory()) +
-        pp.Optional(disks()) +
+        pp.ZeroOrMore(
+            docker() |
+            memory() |
+            disks()
+        ) +
         suppressed_literal('}')
     ).setResultsName('runtime')
 
@@ -159,8 +166,10 @@ def task():
         suppressed_literal('{') +
         pp.Optional(variable_definitions()) +
         command() +
-        pp.Optional(outputs()) +
-        pp.Optional(runtime()) +
+        pp.ZeroOrMore(
+            outputs() |
+            runtime()
+        ) +
         suppressed_literal('}')
     )
 
