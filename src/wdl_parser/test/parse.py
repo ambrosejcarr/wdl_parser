@@ -283,18 +283,16 @@ class TestTask(unittest.TestCase):
     def test_parse_task(self):
         parsed = wdl_parser.parse.task().ignore(wdl_parser.parse.wdl_comment()
                                                 ).parseString(self.data)
-        print(parsed['task_name'])
-        print(parsed['variable_definitions'])
-        print(parsed['outputs'])
+        print(parsed[0]['variable_definitions'])
+        print(parsed[0]['outputs'])
 
     # @unittest.skip('not working yet')
     def test_parse_task2(self):
         parsed = wdl_parser.parse.task().ignore(wdl_parser.parse.wdl_comment()
                                                 ).parseString(self.data2)
-        print(parsed)
-        print(parsed['task_name'])
-        print(parsed['variable_definitions'])
-        print(parsed['outputs'])
+        print(parsed[0]['task_name'])
+        print(parsed[0]['variable_definitions'])
+        print(parsed[0]['outputs'])
 
 
 if __name__ == "__main__":
