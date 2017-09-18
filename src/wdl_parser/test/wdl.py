@@ -168,9 +168,9 @@ class TestWDL(unittest.TestCase):
         parsed_wdl = WDL(data)
         print([t._name for t in parsed_wdl.tasks])
         self.assertEqual(len(parsed_wdl.tasks), 3)
-        self.assertEqual(len(parsed_wdl.workflows), 1)
+        self.assertEqual(len(parsed_wdl.workflow), 1)
 
-
+# todo needs more robust tests!
 
 
 if __name__ == "__main__":
